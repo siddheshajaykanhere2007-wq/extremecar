@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Neon Overdrive 3D - Account Edition</title>
+    <title>Extreme Car 3D</title>
     <style>
         body, html {
             margin: 0; padding: 0; overflow: hidden;
@@ -25,7 +25,15 @@
         .stat-fill { background: #00ffff; height: 100%; width: 0%; transition: width 0.3s; }
         input[type="text"], input[type="password"] { background: rgba(255,255,255,0.1); border: 2px solid #7f00ff; border-radius: 20px; padding: 10px 15px; color: white; font-size: 1rem; width: 80%; outline: none; text-align: center; margin-bottom: 10px; }
         input[type="text"]:focus, input[type="password"]:focus { border-color: #ff007f; box-shadow: 0 0 10px #ff007f; }
-        #hud { position: absolute; top: 20px; left: 20px; color: #00ffff; font-family: monospace; font-size: 1.5rem; text-shadow: 0 0 5px #00ffff; }
+        
+        #hud { position: absolute; top: 20px; left: 20px; color: #00ffff; font-family: monospace; font-size: 1.3rem; text-shadow: 0 0 5px #00ffff; }
+        
+        /* NEW LEADERBOARD UI PANEL */
+        #leaderboard { position: absolute; top: 20px; right: 20px; background: rgba(10, 5, 20, 0.8); border: 1px solid #ff007f; padding: 12px; border-radius: 10px; color: #fff; font-family: monospace; font-size: 1.1rem; box-shadow: 0 0 10px rgba(255, 0, 127, 0.3); min-width: 180px; }
+        .lb-title { color: #ff007f; font-weight: bold; border-bottom: 1px solid #ff007f; margin-bottom: 6px; padding-bottom: 3px; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+        .lb-row { display: flex; justify-content: space-between; margin: 3px 0; }
+        .lb-player { color: #00ffff; font-weight: bold; }
+
         #mobile-controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; box-sizing: border-box; display: none; }
         .control-group { display: flex; gap: 20px; }
         .touch-btn { width: 80px; height: 80px; background: rgba(255, 255, 255, 0.1); border: 3px solid #00ffff; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: #00ffff; font-weight: bold; font-size: 1.5rem; touch-action: none; box-shadow: 0 0 10px rgba(0,255,255,0.3); }
@@ -38,11 +46,9 @@
     <div id="canvas-container"></div>
 
     <div class="ui-layer">
-        <!-- MAIN MENU / GARAGE / ACCOUNT -->
         <div id="menu-screen" class="screen active-screen interactive">
             <h1>NEON CITY OVERDRIVE</h1>
             
-            <!-- ACCOUNT MANAGEMENT PANEL -->
             <div class="panel" style="border-color: #7f00ff; box-shadow: 0 0 15px rgba(127,0,255,0.2);">
                 <h4 style="margin: 0 0 10px 0; text-transform: uppercase; color: #b980ff;">Driver Profile</h4>
                 <div id="account-logged-in" style="display: none;">
@@ -59,7 +65,6 @@
 
             <div id="wallet-display" style="font-size: 1.4rem; margin-bottom: 15px; color: #00ffff; text-shadow: 0 0 10px #00ffff;">Cash: $2000</div>
             
-            <!-- GARAGE -->
             <div class="panel">
                 <h3 id="car-name" style="margin: 0 0 5px 0; color: #fff; font-size: 1.4rem;">Default Cruiser</h3>
                 <p id="car-status" style="color: #66ff66; font-weight: bold; margin: 0 0 10px 0;">UNLOCKED</p>
@@ -81,12 +86,17 @@
             </div>
         </div>
 
-        <!-- HUD GAMEPLAY -->
         <div id="hud-layer" style="display: none;">
             <div id="hud">
                 <div>Speed: <span id="speed-val">0</span> km/h</div>
                 <div>Cash: $<span id="hud-wallet">0</span></div>
                 <div id="mode-objective" style="color: #ff007f; margin-top: 5px; font-weight: bold;"></div>
+            </div>
+
+            <div id="leaderboard" class="interactive">
+                <div class="lb-title">Standings</div>
+                <div id="lb-rows-container">
+                    </div>
             </div>
             
             <div id="mobile-controls" class="interactive">
@@ -94,7 +104,7 @@
                 <div class="control-group"><div class="touch-btn" id="btn-brake">↓</div><div class="touch-btn" id="btn-gas">↑</div></div>
             </div>
             
-            <button class="btn interactive" onclick="exitToMenu()" style="position: absolute; top: 20px; right: 20px; padding: 10px 20px; font-size: 0.9rem; margin: 0;">Exit</button>
+            <button class="btn interactive" onclick="exitToMenu()" style="position: absolute; bottom: 20px; right: 20px; padding: 10px 20px; font-size: 0.9rem; margin: 0;">Exit</button>
         </div>
     </div>
 
@@ -128,12 +138,14 @@
             { name: "Chrono X", color: 0x3d3d3d, price: 25000, speed: 4.0, handling: 0.090 }
         ];
 
+        // AI opponent name pools
+        const botNames = ["Alpha", "Vortex", "Shadow", "Blaze", "Matrix", "Phantom", "Apex"];
+
         let scene, camera, renderer, playerCar;
         let environmentObjects = [], npcs = [];
         let input = { forward: 0, backward: 0, left: 0, right: 0 };
         let carPhysics = { velocity: 0, angle: Math.PI, maxSpeed: 1.4, acc: 0.035, dec: 0.97, turnSpeed: 0.05 };
 
-        // --- CRYPTO HELPER FOR SECURE PASSWORD TO KEY CONVERSION ---
         async function generateCloudKey(username, password) {
             const msgBuffer = new TextEncoder().encode(username.toLowerCase() + "||" + password);
             const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -141,15 +153,11 @@
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 32); 
         }
 
-        // --- SYNC ENGINE ---
         async function syncDataCloud() {
             if(!state.cloudKey) return;
             const payload = { user: state.accountName, cash: state.cash, cars: state.unlockedCars };
             try {
-                await fetch(`https://api.keyvalue.xyz/${state.cloudKey}/gameData`, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
+                await fetch(`https://api.keyvalue.xyz/${state.cloudKey}/gameData`, { method: 'POST', body: JSON.stringify(payload) });
                 alert("Profile saved to cloud successfully!");
             } catch (err) { console.log("Cloud save failure", err); }
         }
@@ -157,59 +165,32 @@
         async function loginOrCreateAccount() {
             let userField = document.getElementById('username-input').value.trim();
             let passField = document.getElementById('password-input').value.trim();
-
-            if (!userField || !passField) {
-                alert("Please fill in both Username and Password.");
-                return;
-            }
-
-            // Turn user+pass into a clean 32-character key instantly
+            if (!userField || !passField) { alert("Please fill in both Username and Password."); return; }
             let computedKey = await generateCloudKey(userField, passField);
-            
             try {
                 let res = await fetch(`https://api.keyvalue.xyz/${computedKey}/gameData`);
                 let data = await res.json();
-                
                 if (data && data.user) {
-                    // Account already exists on the cloud, load it
-                    state.accountName = data.user;
-                    state.cloudKey = computedKey;
-                    state.cash = parseInt(data.cash) || 0;
-                    state.unlockedCars = data.cars || [0];
-                    saveLocalData();
-                    alert(`Welcome back, ${state.accountName}! Data synced.`);
+                    state.accountName = data.user; state.cloudKey = computedKey; state.cash = parseInt(data.cash) || 0; state.unlockedCars = data.cars || [0];
+                    saveLocalData(); alert(`Welcome back, ${state.accountName}! Data synced.`);
                 } else {
-                    // New account, set up data structures
-                    state.accountName = userField;
-                    state.cloudKey = computedKey;
-                    saveLocalData();
-                    await syncDataCloud();
-                    alert(`Account "${state.accountName}" created and secured!`);
+                    state.accountName = userField; state.cloudKey = computedKey; saveLocalData(); await syncDataCloud(); alert(`Account "${state.accountName}" created!`);
                 }
             } catch(e) {
-                // If it's a first-time setup and fetch fails because it's empty
-                state.accountName = userField;
-                state.cloudKey = computedKey;
-                saveLocalData();
-                await syncDataCloud();
-                alert(`Account "${state.accountName}" initialized!`);
+                state.accountName = userField; state.cloudKey = computedKey; saveLocalData(); await syncDataCloud(); alert(`Account "${state.accountName}" initialized!`);
             }
             updateMenuUI();
         }
 
         function saveLocalData() {
-            localStorage.setItem('race_user', state.accountName);
-            localStorage.setItem('race_cloud_key', state.cloudKey);
-            localStorage.setItem('race_cash', state.cash);
-            localStorage.setItem('unlocked_cars', JSON.stringify(state.unlockedCars));
+            localStorage.setItem('race_user', state.accountName); localStorage.setItem('race_cloud_key', state.cloudKey);
+            localStorage.setItem('race_cash', state.cash); localStorage.setItem('unlocked_cars', JSON.stringify(state.unlockedCars));
         }
 
         function logoutAccount() {
             if(confirm("Logout from current account? Your profile stays safe in the cloud.")) {
-                localStorage.removeItem('race_user');
-                localStorage.removeItem('race_cloud_key');
-                state.accountName = ""; state.cloudKey = "";
-                updateMenuUI();
+                localStorage.removeItem('race_user'); localStorage.removeItem('race_cloud_key');
+                state.accountName = ""; state.cloudKey = ""; updateMenuUI();
             }
         }
 
@@ -226,8 +207,7 @@
 
             scene.add(new THREE.AmbientLight(0xffffff, 0.15));
             let dirLight = new THREE.DirectionalLight(0x7f00ff, 0.5);
-            dirLight.position.set(50, 100, 50);
-            scene.add(dirLight);
+            dirLight.position.set(50, 100, 50); scene.add(dirLight);
 
             createNeonCityAndTrack();
             setupInputListeners();
@@ -240,16 +220,13 @@
 
         function createNeonCityAndTrack() {
             const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshStandardMaterial({ color: 0x06060c, roughness: 0.85 }));
-            ground.rotation.x = -Math.PI / 2;
-            scene.add(ground);
+            ground.rotation.x = -Math.PI / 2; scene.add(ground);
 
             const track = new THREE.Mesh(new THREE.RingGeometry(170, 210, 64), new THREE.MeshStandardMaterial({ color: 0x0f0f1d, roughness: 0.5, side: THREE.DoubleSide }));
-            track.rotation.x = -Math.PI / 2; track.position.y = 0.02;
-            scene.add(track);
+            track.rotation.x = -Math.PI / 2; track.position.y = 0.02; scene.add(track);
 
             const line = new THREE.Mesh(new THREE.RingGeometry(189.5, 190.5, 64), new THREE.MeshBasicMaterial({ color: 0x00ffff, side: THREE.DoubleSide }));
-            line.rotation.x = -Math.PI / 2; line.position.y = 0.03;
-            scene.add(line);
+            line.rotation.x = -Math.PI / 2; line.position.y = 0.03; scene.add(line);
 
             const buildingColors = [0xff007f, 0x00ffff, 0x7f00ff, 0xffff00, 0x00ff66];
             for(let i = 0; i < 110; i++) {
@@ -257,8 +234,7 @@
                 const bMat = new THREE.MeshStandardMaterial({ color: 0x080812, emissive: buildingColors[Math.floor(Math.random() * buildingColors.length)], emissiveIntensity: 0.3, roughness: 0.2, metalness: 0.8 });
                 const building = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), bMat);
                 let angle = (i / 110) * Math.PI * 2, dist = 250 + Math.random() * 220;
-                building.position.set(Math.cos(angle)*dist, h/2, Math.sin(angle)*dist);
-                scene.add(building);
+                building.position.set(Math.cos(angle)*dist, h/2, Math.sin(angle)*dist); scene.add(building);
             }
         }
 
@@ -315,6 +291,9 @@
             carPhysics.velocity = 0; carPhysics.angle = Math.PI;
             carPhysics.maxSpeed = selected.speed; carPhysics.turnSpeed = selected.handling;
 
+            // Display or hide leaderboard depending on mode
+            document.getElementById('leaderboard').style.display = (mode === 'racing') ? 'block' : 'none';
+
             if(mode === 'stunt') {
                 document.getElementById('mode-objective').innerText = "STUNT MODE: Hit Ramps for Bonus Cash!";
                 for(let i=0; i<12; i++) {
@@ -324,12 +303,26 @@
                     scene.add(ramp); environmentObjects.push(ramp);
                 }
             } else {
-                document.getElementById('mode-objective').innerText = mode === 'racing' ? "RACE MODE: Outrun Competitors!" : "FREE EXPLORATION";
+                document.getElementById('mode-objective').innerText = mode === 'racing' ? "RACE MODE: Reach 1st Place!" : "FREE EXPLORATION";
+                
+                // Shuffle names to make bots unique
+                let shuffledNames = [...botNames].sort(() => 0.5 - Math.random());
+                
                 for(let i=0; i<(mode === 'racing' ? 4 : 2); i++) {
                     let npcT = carTemplates[Math.floor(Math.random() * carTemplates.length)];
-                    let npcMesh = buildCar(npcT.color, false); let angle = Math.PI + (i * 0.25);
+                    let npcMesh = buildCar(npcT.color, false); 
+                    
+                    // Spread positions along the circuit arc
+                    let angle = Math.PI + (i * 0.15); 
                     npcMesh.position.set(Math.cos(angle)*190, 0, Math.sin(angle)*190);
-                    npcs.push({ mesh: npcMesh, angle: angle, radius: 180 + (i * 6.5), speed: 0.8 + (npcT.speed * 0.2) });
+                    
+                    npcs.push({ 
+                        name: shuffledNames[i] || `Bot ${i+1}`,
+                        mesh: npcMesh, 
+                        angle: angle, 
+                        radius: 180 + (i * 6.5), 
+                        speed: 0.8 + (npcT.speed * 0.22) 
+                    });
                 }
             }
         }
@@ -370,6 +363,7 @@
                 if(playerCar.position.y < 0) playerCar.position.y = 0;
             }
 
+            // Update Bots Position
             npcs.forEach(npc => {
                 npc.angle += npc.speed * 0.0055;
                 npc.mesh.position.set(Math.cos(npc.angle) * npc.radius, 0, Math.sin(npc.angle) * npc.radius);
@@ -379,12 +373,61 @@
             document.getElementById('speed-val').innerText = Math.round(Math.abs(carPhysics.velocity) * 95);
             if(state.gameMode === 'racing' && Math.abs(carPhysics.velocity) > 0.5) {
                 state.cash += 2; document.getElementById('hud-wallet').innerText = state.cash; saveLocalData();
+                updateLeaderboardStandings();
             }
 
             camera.position.x += ((playerCar.position.x + Math.sin(carPhysics.angle) * -9.5) - camera.position.x) * 0.14;
             camera.position.z += ((playerCar.position.z + Math.cos(carPhysics.angle) * -9.5) - camera.position.z) * 0.14;
             camera.position.y += ((playerCar.position.y + 3.8) - camera.position.y) * 0.14;
             camera.lookAt(playerCar.position);
+        }
+
+        // --- LIVE LEADERBOARD TRACKING SYSTEM ---
+        function updateLeaderboardStandings() {
+            if(state.gameMode !== 'racing') return;
+
+            // Calculate current tracking progress angle relative to track center (0,0)
+            let pAngle = Math.atan2(playerCar.position.z, playerCar.position.x);
+            if(pAngle < 0) pAngle += Math.PI * 2;
+
+            // Compile standings data structure arrays
+            let racers = [];
+            
+            // Push player data context
+            racers.push({
+                name: state.accountName ? state.accountName : "Player",
+                angle: pAngle,
+                isPlayer: true
+            });
+
+            // Push bot data contexts
+            npcs.forEach(npc => {
+                let bAngle = npc.angle % (Math.PI * 2);
+                if(bAngle < 0) bAngle += Math.PI * 2;
+                racers.push({
+                    name: npc.name,
+                    angle: bAngle,
+                    isPlayer: false
+                });
+            });
+
+            // Sort racers by track progression (higher angle counter-clockwise means ahead)
+            racers.sort((a, b) => b.angle - a.angle);
+
+            // Re-render standings container HTML
+            let container = document.getElementById('lb-rows-container');
+            container.innerHTML = "";
+            
+            racers.forEach((racer, index) => {
+                let row = document.createElement('div');
+                row.className = "lb-row";
+                if(racer.isPlayer) {
+                    row.innerHTML = `<span class="lb-player">${index + 1}. ${racer.name} (YOU)</span>`;
+                } else {
+                    row.innerHTML = `<span>${index + 1}. ${racer.name}</span>`;
+                }
+                container.appendChild(row);
+            });
         }
 
         function setupInputListeners() {
