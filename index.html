@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Neon Overdrive 3D</title>
+    <title>Neon Overdrive 3D - Ultimate Edition</title>
     <style>
         body, html {
             margin: 0; padding: 0; overflow: hidden;
@@ -15,12 +15,14 @@
         #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
         .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
         .interactive { pointer-events: auto; }
-        .screen { display: none; width: 100%; height: 100%; background: rgba(5, 5, 15, 0.5); justify-content: center; align-items: center; flex-direction: column; color: white; }
+        .screen { display: none; width: 100%; height: 100%; background: rgba(5, 5, 15, 0.4); justify-content: center; align-items: center; flex-direction: column; color: white; }
         .active-screen { display: flex; }
-        h1 { font-size: 3rem; text-transform: uppercase; letter-spacing: 4px; margin: 0 0 20px 0; color: #ff007f; text-shadow: 0 0 15px #ff007f; text-align: center; }
-        .btn { background: linear-gradient(45deg, #ff007f, #7f00ff); color: white; border: none; padding: 15px 40px; font-size: 1.2rem; font-weight: bold; text-transform: uppercase; border-radius: 30px; cursor: pointer; margin: 10px; transition: 0.2s; box-shadow: 0 5px 15px rgba(255,0,127,0.4); }
+        h1 { font-size: 3rem; text-transform: uppercase; letter-spacing: 4px; margin: 0 0 10px 0; color: #ff007f; text-shadow: 0 0 15px #ff007f; text-align: center; }
+        .btn { background: linear-gradient(45deg, #ff007f, #7f00ff); color: white; border: none; padding: 12px 35px; font-size: 1.1rem; font-weight: bold; text-transform: uppercase; border-radius: 30px; cursor: pointer; margin: 10px; transition: 0.2s; box-shadow: 0 5px 15px rgba(255,0,127,0.4); }
         .btn:hover { transform: scale(1.05); }
-        .garage-panel { background: rgba(15,15,30,0.85); padding: 20px; border-radius: 15px; border: 2px solid #00ffff; text-align: center; min-width: 300px; box-sizing: border-box; box-shadow: 0 0 15px rgba(0,255,255,0.2); }
+        .garage-panel { background: rgba(15,15,30,0.9); padding: 20px; border-radius: 15px; border: 2px solid #00ffff; text-align: center; min-width: 320px; box-sizing: border-box; box-shadow: 0 0 15px rgba(0,255,255,0.2); }
+        .stat-bar { background: #222; height: 6px; border-radius: 3px; margin: 5px 0 15px 0; overflow: hidden; }
+        .stat-fill { background: #00ffff; height: 100%; width: 0%; transition: width 0.3s; }
         #hud { position: absolute; top: 20px; left: 20px; color: #00ffff; font-family: monospace; font-size: 1.5rem; text-shadow: 0 0 5px #00ffff; }
         #mobile-controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; box-sizing: border-box; display: none; }
         .control-group { display: flex; gap: 20px; }
@@ -34,29 +36,31 @@
     <div id="canvas-container"></div>
 
     <div class="ui-layer">
-        <!-- MAIN MENU / GARAGE -->
         <div id="menu-screen" class="screen active-screen interactive">
             <h1>NEON CITY OVERDRIVE</h1>
-            <div id="wallet-display" style="font-size: 1.4rem; margin-bottom: 20px; color: #00ffff; text-shadow: 0 0 10px #00ffff;">Cash: $2000</div>
+            <div id="wallet-display" style="font-size: 1.4rem; margin-bottom: 15px; color: #00ffff; text-shadow: 0 0 10px #00ffff;">Cash: $2000</div>
             
             <div class="garage-panel">
-                <h3 id="car-name" style="margin: 0 0 10px 0; color: #fff;">Default Cruiser</h3>
-                <p id="car-status" style="color: #66ff66; font-weight: bold;">UNLOCKED</p>
-                <button id="buy-btn" class="btn" style="display:none; margin: 0;">Buy</button>
-                <div style="margin-top: 15px;">
-                    <button class="btn" onclick="changeCar(-1)" style="padding: 10px 20px; margin: 0 5px;"><</button>
-                    <button class="btn" onclick="changeCar(1)" style="padding: 10px 20px; margin: 0 5px;">></button>
+                <h3 id="car-name" style="margin: 0 0 5px 0; color: #fff; font-size: 1.4rem;">Default Cruiser</h3>
+                <p id="car-status" style="color: #66ff66; font-weight: bold; margin: 0 0 10px 0;">UNLOCKED</p>
+                
+                <div style="text-align: left; font-size: 0.85rem; color: #aaa;">SPEED:</div>
+                <div class="stat-bar"><div id="speed-fill" class="stat-fill"></div></div>
+                
+                <button id="buy-btn" class="btn" style="display:none; margin: 0; width: 100%;">Buy</button>
+                <div style="margin-top: 10px;">
+                    <button class="btn" onclick="changeCar(-1)" style="padding: 8px 20px; margin: 0 5px;"><</button>
+                    <button class="btn" onclick="changeCar(1)" style="padding: 8px 20px; margin: 0 5px;">></button>
                 </div>
             </div>
 
-            <div style="margin-top: 30px; display: flex; flex-wrap: wrap; justify-content: center;">
+            <div style="margin-top: 25px; display: flex; flex-wrap: wrap; justify-content: center;">
                 <button class="btn" onclick="startGame('racing')">Racing Mode</button>
                 <button class="btn" onclick="startGame('free')">Free Play</button>
                 <button class="btn" onclick="startGame('stunt')">Stunt Arena</button>
             </div>
         </div>
 
-        <!-- HUD GAMEPLAY -->
         <div id="hud-layer" style="display: none;">
             <div id="hud">
                 <div>Speed: <span id="speed-val">0</span> km/h</div>
@@ -92,22 +96,30 @@
             inGame: false
         };
 
+        // --- 10 CAR ROSTER CONFIGURATION ---
         const carTemplates = [
-            { name: "Cyber Cruiser", color: 0xff007f, price: 0, speed: 1.4, handling: 0.05 },
-            { name: "Neon Phantom", color: 0x00ffff, price: 1500, speed: 1.9, handling: 0.06 },
-            { name: "Apex Formula", color: 0x7f00ff, price: 5000, speed: 2.5, handling: 0.08 }
+            { name: "Cyber Cruiser", color: 0xff007f, price: 0, speed: 1.4, handling: 0.045 },
+            { name: "Neon Phantom", color: 0x00ffff, price: 800, speed: 1.7, handling: 0.050 },
+            { name: "Tokyo Drift", color: 0xffff00, price: 1500, speed: 1.9, handling: 0.055 },
+            { name: "Viper Stryker", color: 0x00ff66, price: 2500, speed: 2.1, handling: 0.058 },
+            { name: "Interceptor", color: 0xffa500, price: 4000, speed: 2.3, handling: 0.062 },
+            { name: "Ghost Spectre", color: 0xffffff, price: 6000, speed: 2.5, handling: 0.065 },
+            { name: "Sub-Zero", color: 0x0055ff, price: 8500, speed: 2.7, handling: 0.070 },
+            { name: "Inferno GT", color: 0xff3300, price: 12000, speed: 3.0, handling: 0.075 },
+            { name: "Apex Formula", color: 0x7f00ff, price: 17000, speed: 3.4, handling: 0.080 },
+            { name: "Chrono X", color: 0x3d3d3d, price: 25000, speed: 4.0, handling: 0.090 }
         ];
 
         let scene, camera, renderer, playerCar;
         let environmentObjects = [], npcs = [];
         let input = { forward: 0, backward: 0, left: 0, right: 0 };
-        let carPhysics = { velocity: 0, angle: Math.PI, maxSpeed: 1.4, acc: 0.03, dec: 0.97, turnSpeed: 0.05 };
+        let carPhysics = { velocity: 0, angle: Math.PI, maxSpeed: 1.4, acc: 0.035, dec: 0.97, turnSpeed: 0.05 };
 
         function initEngine() {
             const container = document.getElementById('canvas-container');
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x050510);
-            scene.fog = new THREE.FogExp2(0x050510, 0.008);
+            scene.background = new THREE.Color(0x03030a);
+            scene.fog = new THREE.FogExp2(0x03030a, 0.007);
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(0, 30, 80);
@@ -117,9 +129,9 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             container.appendChild(renderer.domElement);
 
-            // Lighting System
-            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-            let dirLight = new THREE.DirectionalLight(0xff00ff, 0.8);
+            // Dark night ambient lighting environment
+            scene.add(new THREE.AmbientLight(0xffffff, 0.15));
+            let dirLight = new THREE.DirectionalLight(0x7f00ff, 0.5);
             dirLight.position.set(50, 100, 50);
             scene.add(dirLight);
 
@@ -127,29 +139,25 @@
             setupInputListeners();
             updateMenuUI();
             
-            // Touch display handler
             if('ontouchstart' in window || navigator.maxTouchPoints > 0) {
                 document.getElementById('mobile-controls').style.display = 'flex';
             }
         }
 
         function createNeonCityAndTrack() {
-            // Track Floor Grid
             const groundGeo = new THREE.PlaneGeometry(2000, 2000);
-            const groundMat = new THREE.MeshStandardMaterial({ color: 0x0c0c16, roughness: 0.8 });
+            const groundMat = new THREE.MeshStandardMaterial({ color: 0x06060c, roughness: 0.85 });
             const ground = new THREE.Mesh(groundGeo, groundMat);
             ground.rotation.x = -Math.PI / 2;
             scene.add(ground);
 
-            // Main circuit racetrack
             const trackGeo = new THREE.RingGeometry(170, 210, 64);
-            const trackMat = new THREE.MeshStandardMaterial({ color: 0x16162d, roughness: 0.4, side: THREE.DoubleSide });
+            const trackMat = new THREE.MeshStandardMaterial({ color: 0x0f0f1d, roughness: 0.5, side: THREE.DoubleSide });
             const track = new THREE.Mesh(trackGeo, trackMat);
             track.rotation.x = -Math.PI / 2;
             track.position.y = 0.02;
             scene.add(track);
 
-            // Neon cyan lane lines
             const lineGeo = new THREE.RingGeometry(189.5, 190.5, 64);
             const lineMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, side: THREE.DoubleSide });
             const line = new THREE.Mesh(lineGeo, lineMat);
@@ -157,53 +165,97 @@
             line.position.y = 0.03;
             scene.add(line);
 
-            // Glowing City Buildings (Visible from menu and gameplay)
-            const buildingColors = [0xff007f, 0x00ffff, 0x7f00ff];
-            for(let i = 0; i < 90; i++) {
-                let w = 20 + Math.random() * 20;
-                let h = 60 + Math.random() * 100;
-                let d = 20 + Math.random() * 20;
+            // Skyscrapers
+            const buildingColors = [0xff007f, 0x00ffff, 0x7f00ff, 0xffff00, 0x00ff66];
+            for(let i = 0; i < 110; i++) {
+                let w = 20 + Math.random() * 25;
+                let h = 60 + Math.random() * 120;
+                let d = 20 + Math.random() * 25;
                 
                 const bGeo = new THREE.BoxGeometry(w, h, d);
                 let randColor = buildingColors[Math.floor(Math.random() * buildingColors.length)];
                 
                 const bMat = new THREE.MeshStandardMaterial({
-                    color: 0x101020,
+                    color: 0x080812,
                     emissive: randColor,
-                    emissiveIntensity: 0.25,
-                    roughness: 0.3
+                    emissiveIntensity: 0.3,
+                    roughness: 0.2,
+                    metalness: 0.8
                 });
                 
                 const building = new THREE.Mesh(bGeo, bMat);
-                let angle = (i / 90) * Math.PI * 2 + Math.random() * 0.1;
-                let dist = 260 + Math.random() * 200;
+                let angle = (i / 110) * Math.PI * 2 + Math.random() * 0.1;
+                let dist = 250 + Math.random() * 220;
                 
                 building.position.set(Math.cos(angle)*dist, h/2, Math.sin(angle)*dist);
                 scene.add(building);
             }
         }
 
-        function buildCar(colorHex) {
+        // --- UPGRADED GRAPHICS CAR BUILDING ENGINE ---
+        function buildCar(colorHex, isPlayer = false) {
             const carGroup = new THREE.Group();
-            const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, metalness: 0.7, roughness: 0.2 });
+            
+            // Premium realistic glossy finish material
+            const bodyMat = new THREE.MeshStandardMaterial({ 
+                color: colorHex, 
+                metalness: 0.9, 
+                roughness: 0.15 
+            });
 
-            const body = new THREE.Mesh(new THREE.BoxGeometry(2, 0.6, 4.2), bodyMat);
+            // Aerodynamic chassis body design improvements
+            const body = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.55, 4.3), bodyMat);
             body.position.y = 0.4;
             carGroup.add(body);
 
-            const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 2), new THREE.MeshStandardMaterial({ color: 0x0d0d0d }));
-            cabin.position.set(0, 0.85, -0.2);
+            // Metallic spoiler wing setup
+            const wingSp = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.1, 0.4), bodyMat);
+            wingSp.position.set(0, 0.85, -1.9);
+            carGroup.add(wingSp);
+
+            const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.5, 1.9), new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.1, metalness: 0.9 }));
+            cabin.position.set(0, 0.8, -0.1);
             carGroup.add(cabin);
 
-            // Neon Underglow
-            const glow = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.1, 3.8), new THREE.MeshBasicMaterial({ color: colorHex }));
+            // Neon Underglow Bar Frame
+            const glow = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.05, 3.6), new THREE.MeshBasicMaterial({ color: colorHex }));
             glow.position.y = 0.05;
             carGroup.add(glow);
 
-            // Wheels
-            const wGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.5, 16);
-            const wMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.9 });
-            const offsets = [[-1.05, 0.45, 1.3], [1.05, 0.45, 1.3], [-1.05, 0.45, -1.3], [1.05, 0.45, -1.3]];
+            // --- FUNCTIONAL NIGHT HEADLIGHTS / TAILLIGHTS ---
+            const lightGeo = new THREE.BoxGeometry(0.3, 0.15, 0.1);
+            
+            // Front Headlights (Bright Yellow/White glow blocks)
+            const headMat = new THREE.MeshBasicMaterial({ color: 0xfffee0 });
+            const leftHead = new THREE.Mesh(lightGeo, headMat);
+            leftHead.position.set(-0.7, 0.4, 2.15);
+            const rightHead = leftHead.clone();
+            rightHead.position.x = 0.7;
+            carGroup.add(leftHead);
+            carGroup.add(rightHead);
+
+            // Rear Tail Lights (Bright Red glow blocks)
+            const tailMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
+            const leftTail = new THREE.Mesh(lightGeo, tailMat);
+            leftTail.position.set(-0.7, 0.4, -2.15);
+            const rightTail = leftTail.clone();
+            rightTail.position.x = 0.7;
+            carGroup.add(leftTail);
+            carGroup.add(rightTail);
+
+            // If it's the player car, mount true real-time lighting rays pointing ahead
+            if(isPlayer) {
+                const spotlight = new THREE.SpotLight(0xffffff, 2, 60, Math.PI / 4, 0.5, 1);
+                spotlight.position.set(0, 0.5, 2.1);
+                spotlight.target.position.set(0, 0, 15);
+                carGroup.add(spotlight);
+                carGroup.add(spotlight.target);
+            }
+
+            // Chrome Wheels Custom Design
+            const wGeo = new THREE.CylinderGeometry(0.48, 0.48, 0.45, 24);
+            const wMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8, roughness: 0.3 });
+            const offsets = [[-1.1, 0.48, 1.35], [1.1, 0.48, 1.35], [-1.1, 0.48, -1.35], [1.1, 0.48, -1.35]];
             
             offsets.forEach(pos => {
                 const wheel = new THREE.Mesh(wGeo, wMat);
@@ -227,7 +279,7 @@
             environmentObjects.forEach(obj => scene.remove(obj)); environmentObjects = [];
 
             let selected = carTemplates[state.currentCarIndex];
-            playerCar = buildCar(selected.color);
+            playerCar = buildCar(selected.color, true); // true grants headlight raycasters
             playerCar.position.set(190, 0, 0);
             
             carPhysics.velocity = 0;
@@ -239,8 +291,8 @@
                 document.getElementById('mode-objective').innerText = "STUNT MODE: Hit Ramps for Bonus Cash!";
                 generateRamps();
             } else if(mode === 'racing') {
-                document.getElementById('mode-objective').innerText = "RACE MODE: Drive to Outrun Competitors!";
-                generateNPCs(3);
+                document.getElementById('mode-objective').innerText = "RACE MODE: Outrun Opponents for Cash!";
+                generateNPCs(4);
             } else {
                 document.getElementById('mode-objective').innerText = "FREE EXPLORATION NEON CITY";
                 generateNPCs(2);
@@ -248,10 +300,10 @@
         }
 
         function generateRamps() {
-            for(let i=0; i<10; i++) {
-                const ramp = new THREE.Mesh(new THREE.BoxGeometry(10, 3, 16), new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.2 }));
-                ramp.rotation.x = 0.25;
-                let angle = (i / 10) * Math.PI * 2 + Math.random() * 0.4;
+            for(let i=0; i<12; i++) {
+                const ramp = new THREE.Mesh(new THREE.BoxGeometry(12, 3.5, 18), new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.25 }));
+                ramp.rotation.x = 0.24;
+                let angle = (i / 12) * Math.PI * 2 + Math.random() * 0.3;
                 let radius = 180 + Math.random() * 20;
                 ramp.position.set(Math.cos(angle)*radius, 0.5, Math.sin(angle)*radius);
                 ramp.rotation.y = -angle + Math.PI/2;
@@ -262,24 +314,23 @@
 
         function generateNPCs(count) {
             for(let i=0; i<count; i++) {
-                let npcMesh = buildCar(0x7f00ff);
-                let angle = Math.PI + (i * 0.3);
+                let npcTemplate = carTemplates[Math.floor(Math.random() * carTemplates.length)];
+                let npcMesh = buildCar(npcTemplate.color, false);
+                let angle = Math.PI + (i * 0.25);
                 npcMesh.position.set(Math.cos(angle)*190, 0, Math.sin(angle)*190);
-                npcs.push({ mesh: npcMesh, angle: angle, radius: 182 + (i * 7), speed: 0.8 + Math.random() * 0.5 });
+                npcs.push({ mesh: npcMesh, angle: angle, radius: 180 + (i * 6.5), speed: 0.8 + (npcTemplate.speed * 0.2) });
             }
         }
 
         function updatePhysics() {
             if(!state.inGame || !playerCar) {
-                // Main Menu gentle camera spin layout
-                camera.position.x = Math.sin(Date.now() * 0.0001) * 120;
-                camera.position.z = Math.cos(Date.now() * 0.0001) * 120;
-                camera.position.y = 40;
-                camera.lookAt(0, 0, 0);
+                camera.position.x = Math.sin(Date.now() * 0.00015) * 110;
+                camera.position.z = Math.cos(Date.now() * 0.00015) * 110;
+                camera.position.y = 35;
+                camera.lookAt(0, 10, 0);
                 return;
             }
 
-            // Movement acceleration inputs
             if (input.forward) {
                 carPhysics.velocity += carPhysics.acc;
                 if (carPhysics.velocity > carPhysics.maxSpeed) carPhysics.velocity = carPhysics.maxSpeed;
@@ -290,7 +341,6 @@
                 carPhysics.velocity *= carPhysics.dec;
             }
 
-            // Handling rotational steering logic
             if (Math.abs(carPhysics.velocity) > 0.05) {
                 const turnDir = carPhysics.velocity > 0 ? 1 : -1;
                 if (input.left) carPhysics.angle += carPhysics.turnSpeed * turnDir;
@@ -301,17 +351,16 @@
             playerCar.position.z += Math.cos(carPhysics.angle) * carPhysics.velocity;
             playerCar.rotation.y = carPhysics.angle;
 
-            // Collision check loops for Jump systems
             let overRamp = false;
             environmentObjects.forEach(ramp => {
                 let dist = playerCar.position.distanceTo(ramp.position);
-                if(dist < 12 && Math.abs(carPhysics.velocity) > 0.4) {
+                if(dist < 13 && Math.abs(carPhysics.velocity) > 0.4) {
                     overRamp = true;
-                    if(playerCar.position.y < 6) {
-                        playerCar.position.y += 0.35;
-                        playerCar.rotation.x = -0.2;
+                    if(playerCar.position.y < 7) {
+                        playerCar.position.y += 0.38;
+                        playerCar.rotation.x = -0.22;
                         if(state.gameMode === 'stunt') {
-                            state.cash += 5;
+                            state.cash += 8;
                             document.getElementById('hud-wallet').innerText = state.cash;
                         }
                     }
@@ -319,31 +368,29 @@
             });
 
             if(!overRamp && playerCar.position.y > 0) {
-                playerCar.position.y -= 0.2;
-                playerCar.rotation.x *= 0.8;
+                playerCar.position.y -= 0.22;
+                playerCar.rotation.x *= 0.85;
                 if(playerCar.position.y < 0) playerCar.position.y = 0;
             }
 
-            // Move AI bots
             npcs.forEach(npc => {
-                npc.angle += npc.speed * 0.006;
+                npc.angle += npc.speed * 0.0055;
                 npc.mesh.position.x = Math.cos(npc.angle) * npc.radius;
                 npc.mesh.position.z = Math.sin(npc.angle) * npc.radius;
                 npc.mesh.rotation.y = -npc.angle + Math.PI/2;
             });
 
-            document.getElementById('speed-val').innerText = Math.round(Math.abs(carPhysics.velocity) * 110);
+            document.getElementById('speed-val').innerText = Math.round(Math.abs(carPhysics.velocity) * 95);
             
             if(state.gameMode === 'racing' && Math.abs(carPhysics.velocity) > 0.5) {
-                state.cash += 1;
+                state.cash += 2;
                 document.getElementById('hud-wallet').innerText = state.cash;
                 localStorage.setItem('race_cash', state.cash);
             }
 
-            // Smooth chase tracking camera calculations
-            camera.position.x += ((playerCar.position.x + Math.sin(carPhysics.angle) * -9) - camera.position.x) * 0.12;
-            camera.position.z += ((playerCar.position.z + Math.cos(carPhysics.angle) * -9) - camera.position.z) * 0.12;
-            camera.position.y += ((playerCar.position.y + 4) - camera.position.y) * 0.12;
+            camera.position.x += ((playerCar.position.x + Math.sin(carPhysics.angle) * -9.5) - camera.position.x) * 0.14;
+            camera.position.z += ((playerCar.position.z + Math.cos(carPhysics.angle) * -9.5) - camera.position.z) * 0.14;
+            camera.position.y += ((playerCar.position.y + 3.8) - camera.position.y) * 0.14;
             camera.lookAt(playerCar.position);
         }
 
@@ -381,6 +428,10 @@
             let activeCar = carTemplates[state.currentCarIndex];
             document.getElementById('car-name').innerText = activeCar.name;
 
+            // Stat bars mapping filling updates
+            let speedPercent = (activeCar.speed / 4.0) * 100;
+            document.getElementById('speed-fill').style.width = `${speedPercent}%`;
+
             const buyBtn = document.getElementById('buy-btn');
             const statusTxt = document.getElementById('car-status');
 
@@ -406,7 +457,7 @@
                 localStorage.setItem('unlocked_cars', JSON.stringify(state.unlockedCars));
                 updateMenuUI();
             } else {
-                alert("Insufficient funds!");
+                alert("Insufficient funds! Keep racing or hitting stunts to make money.");
             }
         }
 
