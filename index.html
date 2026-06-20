@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Neon Overdrive 3D - Cloud Sync Edition</title>
+    <title>Neon Overdrive 3D - Account Edition</title>
     <style>
         body, html {
             margin: 0; padding: 0; overflow: hidden;
@@ -23,8 +23,8 @@
         .panel { background: rgba(15,15,30,0.9); padding: 20px; border-radius: 15px; border: 2px solid #00ffff; text-align: center; min-width: 320px; max-width: 400px; box-sizing: border-box; box-shadow: 0 0 15px rgba(0,255,255,0.2); margin-bottom: 15px; }
         .stat-bar { background: #222; height: 6px; border-radius: 3px; margin: 5px 0 15px 0; overflow: hidden; }
         .stat-fill { background: #00ffff; height: 100%; width: 0%; transition: width 0.3s; }
-        input[type="text"] { background: rgba(255,255,255,0.1); border: 2px solid #7f00ff; border-radius: 20px; padding: 10px 15px; color: white; font-size: 1rem; width: 80%; outline: none; text-align: center; margin-bottom: 10px; }
-        input[type="text"]:focus { border-color: #ff007f; box-shadow: 0 0 10px #ff007f; }
+        input[type="text"], input[type="password"] { background: rgba(255,255,255,0.1); border: 2px solid #7f00ff; border-radius: 20px; padding: 10px 15px; color: white; font-size: 1rem; width: 80%; outline: none; text-align: center; margin-bottom: 10px; }
+        input[type="text"]:focus, input[type="password"]:focus { border-color: #ff007f; box-shadow: 0 0 10px #ff007f; }
         #hud { position: absolute; top: 20px; left: 20px; color: #00ffff; font-family: monospace; font-size: 1.5rem; text-shadow: 0 0 5px #00ffff; }
         #mobile-controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; box-sizing: border-box; display: none; }
         .control-group { display: flex; gap: 20px; }
@@ -38,26 +38,28 @@
     <div id="canvas-container"></div>
 
     <div class="ui-layer">
+        <!-- MAIN MENU / GARAGE / ACCOUNT -->
         <div id="menu-screen" class="screen active-screen interactive">
             <h1>NEON CITY OVERDRIVE</h1>
             
+            <!-- ACCOUNT MANAGEMENT PANEL -->
             <div class="panel" style="border-color: #7f00ff; box-shadow: 0 0 15px rgba(127,0,255,0.2);">
                 <h4 style="margin: 0 0 10px 0; text-transform: uppercase; color: #b980ff;">Driver Profile</h4>
                 <div id="account-logged-in" style="display: none;">
                     <div id="display-profile-name" style="font-size: 1.3rem; font-weight: bold; color: #fff;">Driver</div>
-                    <div id="display-sync-id" style="font-size: 0.8rem; color: #00ffff; cursor: pointer; margin-top: 5px;" onclick="copySyncID()">Click to copy Sync ID</div>
                     <button class="btn" onclick="syncDataCloud()" style="padding: 6px 15px; font-size: 0.8rem; margin-top: 10px;">Cloud Save</button>
-                    <button class="btn" onclick="logoutAccount()" style="padding: 6px 15px; font-size: 0.8rem; background: #333; box-shadow: none; margin-top: 10px;">Switch</button>
+                    <button class="btn" onclick="logoutAccount()" style="padding: 6px 15px; font-size: 0.8rem; background: #333; box-shadow: none; margin-top: 10px;">Logout / Switch</button>
                 </div>
                 <div id="account-logged-out">
-                    <input type="text" id="username-input" placeholder="Enter Account Name" maxlength="14"><br>
-                    <input type="text" id="sync-id-input" placeholder="Or Paste Sync ID to Connect" style="font-size: 0.8rem;"><br>
-                    <button class="btn" onclick="createOrLoadAccount()" style="padding: 8px 20px; font-size: 0.9rem; margin: 5px 0 0 0; width: 90%;">Confirm Driver</button>
+                    <input type="text" id="username-input" placeholder="Username" maxlength="14"><br>
+                    <input type="password" id="password-input" placeholder="Password"><br>
+                    <button class="btn" onclick="loginOrCreateAccount()" style="padding: 8px 20px; font-size: 0.9rem; margin: 5px 0 0 0; width: 90%;">Login / Create Account</button>
                 </div>
             </div>
 
             <div id="wallet-display" style="font-size: 1.4rem; margin-bottom: 15px; color: #00ffff; text-shadow: 0 0 10px #00ffff;">Cash: $2000</div>
             
+            <!-- GARAGE -->
             <div class="panel">
                 <h3 id="car-name" style="margin: 0 0 5px 0; color: #fff; font-size: 1.4rem;">Default Cruiser</h3>
                 <p id="car-status" style="color: #66ff66; font-weight: bold; margin: 0 0 10px 0;">UNLOCKED</p>
@@ -79,6 +81,7 @@
             </div>
         </div>
 
+        <!-- HUD GAMEPLAY -->
         <div id="hud-layer" style="display: none;">
             <div id="hud">
                 <div>Speed: <span id="speed-val">0</span> km/h</div>
@@ -99,7 +102,7 @@
         // --- DATA PERSISTENCE LAYER ---
         let state = {
             accountName: localStorage.getItem('race_user') || "",
-            syncID: localStorage.getItem('race_sync_id') || "",
+            cloudKey: localStorage.getItem('race_cloud_key') || "",
             cash: parseInt(localStorage.getItem('race_cash')) || 2000,
             currentCarIndex: 0,
             unlockedCars: [0],
@@ -130,83 +133,84 @@
         let input = { forward: 0, backward: 0, left: 0, right: 0 };
         let carPhysics = { velocity: 0, angle: Math.PI, maxSpeed: 1.4, acc: 0.035, dec: 0.97, turnSpeed: 0.05 };
 
-        // --- PUBLIC ACCOUNT SYNC CONTROLLER ---
-        // Uses a public, free decentralized text bin service to cross-sync configurations dynamically
+        // --- CRYPTO HELPER FOR SECURE PASSWORD TO KEY CONVERSION ---
+        async function generateCloudKey(username, password) {
+            const msgBuffer = new TextEncoder().encode(username.toLowerCase() + "||" + password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 32); 
+        }
+
+        // --- SYNC ENGINE ---
         async function syncDataCloud() {
-            if(!state.syncID) return;
+            if(!state.cloudKey) return;
             const payload = { user: state.accountName, cash: state.cash, cars: state.unlockedCars };
             try {
-                // Utilizing keyvalue cloud storage cluster endpoint natively
-                await fetch(`https://api.keyvalue.xyz/${state.syncID}/gameData`, {
+                await fetch(`https://api.keyvalue.xyz/${state.cloudKey}/gameData`, {
                     method: 'POST',
                     body: JSON.stringify(payload)
                 });
-                alert("Game profile saved to Cloud! Ready to access on mobile.");
+                alert("Profile saved to cloud successfully!");
             } catch (err) { console.log("Cloud save failure", err); }
         }
 
-        async function createOrLoadAccount() {
+        async function loginOrCreateAccount() {
             let userField = document.getElementById('username-input').value.trim();
-            let syncField = document.getElementById('sync-id-input').value.trim();
+            let passField = document.getElementById('password-input').value.trim();
 
-            if (syncField) {
-                // Link via Existing Token
-                try {
-                    let res = await fetch(`https://api.keyvalue.xyz/${syncField}/gameData`);
-                    let data = await res.json();
-                    if(data && data.user) {
-                        state.accountName = data.user;
-                        state.syncID = syncField;
-                        state.cash = parseInt(data.cash) || 0;
-                        state.unlockedCars = data.cars || [0];
-                        saveLocalData();
-                        alert(`Successfully synced account: ${state.accountName}!`);
-                    } else { alert("Sync ID not found or blank cloud file."); }
-                } catch(e) { alert("Error downloading cloud account data."); }
-            } else if (userField) {
-                // Initialize a brand-new cloud storage key pair token
-                state.accountName = userField;
-                try {
-                    let tokenRes = await fetch('https://api.keyvalue.xyz/new', { method: 'POST' });
-                    let path = await tokenRes.text(); 
-                    let cleanKey = path.trim().split('/').pop();
-                    if(cleanKey) {
-                        state.syncID = cleanKey;
-                        saveLocalData();
-                        await syncDataCloud();
-                    }
-                } catch(err) {
-                    // Fallback token offline generation
-                    state.syncID = "LOCAL_" + Math.floor(Math.random()*100000);
-                    saveLocalData();
-                }
-            } else {
-                alert("Please fill in a profile nickname or insert a sync code.");
+            if (!userField || !passField) {
+                alert("Please fill in both Username and Password.");
                 return;
+            }
+
+            // Turn user+pass into a clean 32-character key instantly
+            let computedKey = await generateCloudKey(userField, passField);
+            
+            try {
+                let res = await fetch(`https://api.keyvalue.xyz/${computedKey}/gameData`);
+                let data = await res.json();
+                
+                if (data && data.user) {
+                    // Account already exists on the cloud, load it
+                    state.accountName = data.user;
+                    state.cloudKey = computedKey;
+                    state.cash = parseInt(data.cash) || 0;
+                    state.unlockedCars = data.cars || [0];
+                    saveLocalData();
+                    alert(`Welcome back, ${state.accountName}! Data synced.`);
+                } else {
+                    // New account, set up data structures
+                    state.accountName = userField;
+                    state.cloudKey = computedKey;
+                    saveLocalData();
+                    await syncDataCloud();
+                    alert(`Account "${state.accountName}" created and secured!`);
+                }
+            } catch(e) {
+                // If it's a first-time setup and fetch fails because it's empty
+                state.accountName = userField;
+                state.cloudKey = computedKey;
+                saveLocalData();
+                await syncDataCloud();
+                alert(`Account "${state.accountName}" initialized!`);
             }
             updateMenuUI();
         }
 
         function saveLocalData() {
             localStorage.setItem('race_user', state.accountName);
-            localStorage.setItem('race_sync_id', state.syncID);
+            localStorage.setItem('race_cloud_key', state.cloudKey);
             localStorage.setItem('race_cash', state.cash);
             localStorage.setItem('unlocked_cars', JSON.stringify(state.unlockedCars));
         }
 
         function logoutAccount() {
-            if(confirm("Disconnect current user layout profiles? Status saves remain locally.")) {
+            if(confirm("Logout from current account? Your profile stays safe in the cloud.")) {
                 localStorage.removeItem('race_user');
-                localStorage.removeItem('race_sync_id');
-                state.accountName = ""; state.syncID = "";
+                localStorage.removeItem('race_cloud_key');
+                state.accountName = ""; state.cloudKey = "";
                 updateMenuUI();
             }
-        }
-
-        function copySyncID() {
-            if(!state.syncID) return;
-            navigator.clipboard.writeText(state.syncID);
-            alert("Sync ID Copied! Paste this code on your mobile device to download your progression.");
         }
 
         function initEngine() {
@@ -406,12 +410,10 @@
             document.getElementById('wallet-display').innerText = `Cash: $${state.cash}`;
             document.getElementById('hud-wallet').innerText = state.cash;
             
-            // Account UI toggling
             if(state.accountName) {
                 document.getElementById('account-logged-out').style.display = "none";
                 document.getElementById('account-logged-in').style.display = "block";
                 document.getElementById('display-profile-name').innerText = `Driver: ${state.accountName}`;
-                document.getElementById('display-sync-id').innerText = `ID: ${state.syncID} (Tap to Copy)`;
             } else {
                 document.getElementById('account-logged-out').style.display = "block";
                 document.getElementById('account-logged-in').style.display = "none";
@@ -437,7 +439,7 @@
             let activeCar = carTemplates[state.currentCarIndex];
             if(state.cash >= activeCar.price) {
                 state.cash -= activeCar.price; state.unlockedCars.push(state.currentCarIndex);
-                saveLocalData(); updateMenuUI(); if(state.syncID) syncDataCloud();
+                saveLocalData(); updateMenuUI(); if(state.cloudKey) syncDataCloud();
             } else { alert("Insufficient funds!"); }
         }
 
